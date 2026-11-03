@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#10151e" />
+    <title>Doppler Locator · Listen to the sky</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script
+      defer
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="eyebrow">ACOUSTIC FIELD LAB / 01</span>
+        <h1>Doppler<span>Locator</span></h1>
+        <p>
+          Find where a recording was made from the sound of passing aircraft.
+        </p>
+        <p class="muted">
+          Free ADS-B data. Uploaded audio is deleted after analysis. Your GPS
+          stays on your device.
+        </p>
+      </header>
+      <nav aria-label="Input mode">
+        <button class="selected" data-tab="record">Record now</button
+        ><button data-tab="upload">Upload file</button
+        ><button data-tab="demo">Demo</button>
+      </nav>
+      <div class="workspace">
+        <section class="panel input-panel">
+          <div id="region-controls">
+            <div class="section-title">
+              <h2>01 / Search region</h2>
+              <span id="coordinates">48.860, 2.350</span>
+            </div>
+            <p class="muted">
+              Tap the map or search a city. This is the search area, not your
+              location.
+            </p>
+            <form id="search">
+              <input
+                id="city"
+                placeholder="Search a city"
+                aria-label="City"
+                required
+              /><button>Find</button>
+            </form>
+            <div id="picker" aria-label="Choose search region"></div>
+            <label for="radius"
+              >Search radius <output id="radius-value">25 km</output></label
+            ><input id="radius" type="range" min="10" max="50" value="25" />
+            <p id="nearby" class="muted">Checking nearby aircraft…</p>
+          </div>
+          <p id="collected" class="muted" aria-live="polite"></p>
+          <div id="record" class="tab-content">
+            <h2>02 / Listen for a pass</h2>
+            <p>
+              Wait until you hear a plane. Record 60–180 seconds while it
+              passes.
+            </p>
+            <div class="record-line">
+              <button id="record-button" class="primary">
+                ● Start recording</button
+              ><time id="timer">00:00</time>
+            </div>
+            <meter
+              id="level"
+              min="0"
+              max="1"
+              value="0"
+              aria-label="Microphone level"
+            ></meter>
+            <p class="muted">
+              Microphone processing is disabled to preserve engine tones. HTTPS
+              or localhost is required.
+            </p>
+          </div>
+          <div id="upload" class="tab-content" hidden>
+            <h2>02 / Your recording</h2>
+            <label
+              >Audio or video<input
+                id="file"
+                type="file"
+                accept="audio/*,video/*" /></label
+            ><label
+              >Aircraft tracks file (optional)<input
+                id="tracks-file"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+            <p class="muted">
+              The hosted version stores no aircraft history. Use a recording
+              made in the last ~60 seconds (live positions projected ±60
+              seconds), or include its saved tracks JSON. Arbitrary past videos
+              require historical ADS-B.
+            </p>
+            <label
+              >Recording start<input
+                id="start-time"
+                type="datetime-local"
+                step="1" /></label
+            ><label>Timezone<select id="timezone"></select></label
+            ><label
+              >Clock uncertainty <output id="clock-value">±20 s</output
+              ><input
+                id="clock"
+                type="range"
+                min="0"
+                max="60"
+                step="2"
+                value="20" /></label
+            ><button id="analyze-upload" class="primary">
+              Analyze recording ↗
+            </button>
+            <details>
+              <summary>Cached coverage</summary>
+              <pre id="coverage">Loading…</pre>
+            </details>
+          </div>
+          <div id="demo" class="tab-content" hidden>
+            <h2>01 / A controlled experiment</h2>
+            <p>
+              A harmonic engine tone follows a real, recently cached aircraft
+              track, mixed with noise and stationary hum. The solver searches a
+              25 km region.
+            </p>
+            <button id="generate" class="primary">
+              Generate synthetic test ↗</button
+            ><audio id="demo-audio" controls hidden></audio>
+            <p class="muted">
+              Hosted demos project real live ADS-B states along straight paths.
+              In box mode, allow 60 seconds for the watch cache to fill. A demo
+              tests the model, not real-world accuracy.
+            </p>
+          </div>
+        </section>
+        <section class="panel result-panel">
+          <div class="section-title">
+            <h2>Location estimate</h2>
+            <span id="badge" class="badge">AWAITING SIGNAL</span>
+          </div>
+          <div id="status" role="status" aria-live="polite">
+            Choose a recording or try a synthetic test to begin.
+          </div>
+          <div id="result-map"></div>
+          <div id="results" hidden>
+            <p id="downloads" hidden>
+              Download recording bundle:
+              <a id="download-wav" download="recording.wav">audio WAV</a> ·
+              <a id="download-tracks" download="tracks.json">tracks JSON</a>
+            </p>
+            <p id="explanation"></p>
+            <div id="error-distance" class="accent"></div>
+            <button id="compare">Compare with my actual location</button>
+            <h3>Predicted Doppler ridge <span class="accent">— cyan</span></h3>
+            <p class="muted">40–2,000 Hz · log frequency · time →</p>
+            <img
+              id="spectrum"
+              alt="Whitened spectrogram with predicted Doppler curve in cyan"
+            />
+            <h3>Raw spectrogram · 40–600 Hz</h3>
+            <img id="raw-spectrum" alt="Raw log power spectrogram" />
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Aircraft</th>
+                    <th>Type</th>
+                    <th>Tone</th>
+                    <th>Fit z</th>
+                    <th>Nearest</th>
+                  </tr>
+                </thead>
+                <tbody id="aircraft-table"></tbody>
+              </table>
+            </div>
+            <p class="muted">
+              A straight flight can create mirrored peaks. Weather, changing
+              engine RPM and other sounds can weaken the estimate. Treat this as
+              an experiment.
+            </p>
+          </div>
+        </section>
+      </div>
+      <footer>
+        Open skies, open data. No keys. No telemetry. Inspired by paraschopra
+        &amp; 0x45o.
+      </footer>
+    </main>
+  </body>
+</html>

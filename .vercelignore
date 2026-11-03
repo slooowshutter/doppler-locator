@@ -1,0 +1,10 @@
+.venv
+.git
+data
+tests
+ref
+*.log
+TASK*.md
+codex_run*.log
+.pytest_cache
+**/__pycache__

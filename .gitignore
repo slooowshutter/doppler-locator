@@ -1,0 +1,10 @@
+.venv/
+data/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.wav
+!tests/fixtures/*.wav
+codex_run*.log
+.vercel/
+.env*
