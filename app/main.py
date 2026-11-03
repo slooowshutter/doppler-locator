@@ -24,6 +24,18 @@ from .tracks import TrackStore, Fetcher, HISTORY_ERROR, latlon, interpolate, enu
 from .audio import decode
 from .locate import locate, synthesize
 
+def is_stateless_env():
+    return os.getenv("VERCEL") is not None or os.getenv("DOPPLER_STATELESS") == "1"
+
+
+ROOT = Path(__file__).resolve().parent.parent
+STATIC_DIR = ROOT / "static"
+DEMO_DIR = (
+    Path(tempfile.gettempdir()) / "doppler-demo"
+    if is_stateless_env()
+    else ROOT / "data" / "demo"
+)
+
 
 def is_stateless():
     """Select hosted mode from deployment environment."""
@@ -120,12 +132,12 @@ async def live_positions(lat, lon, radius):
 
 app = FastAPI(lifespan=lifespan)
 app.router.route_class = TrackFormRoute
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/")
 def index():
-    return FileResponse("static/index.html")
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/healthz")
@@ -454,7 +466,7 @@ async def demo(req: DemoRequest = DemoRequest()):
             true_lon=true[1],
         )
     did = uuid.uuid4().hex
-    folder = Path("data/demo")
+    folder = DEMO_DIR
     folder.mkdir(parents=True, exist_ok=True)
     sf.write(folder / f"{did}.wav", y, 8000)
     for old in folder.glob("*.wav"):
@@ -477,7 +489,7 @@ async def demo(req: DemoRequest = DemoRequest()):
 def demo_wav(did: str):
     if len(did) != 32 or any(c not in "0123456789abcdef" for c in did):
         raise HTTPException(404)
-    p = Path("data/demo") / f"{did}.wav"
+    p = DEMO_DIR / f"{did}.wav"
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(p, media_type="audio/wav")

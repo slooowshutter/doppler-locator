@@ -33,7 +33,7 @@ Tests use only fake tracks and generated audio; no network. The live script uses
 
 ## Deploy to Vercel
 
-Import this repository into Vercel as a Python project (no frontend build command). `api/index.py` exposes the FastAPI app; `vercel.json` routes every URL, including static assets, to that function, with a 60-second duration and 2048 MB memory allocation. Runtime dependencies are in `requirements.txt`; development dependencies are in `requirements-dev.txt`. `.vercelignore` excludes local caches, media, tests and the virtual environment. No keys or paid APIs are required.
+Import this repository into Vercel as a Python project (no frontend build command). `index.py` exposes the FastAPI app; `vercel.json` routes every URL, including static assets, to that function, with a 60-second duration and 2048 MB memory allocation. Runtime dependencies are in `requirements.txt`; development dependencies are in `requirements-dev.txt`. `.vercelignore` excludes local caches, media, tests and the virtual environment. No keys or paid APIs are required.
 
 Vercel sets `VERCEL`, which selects stateless mode. Test that mode locally with:
 
